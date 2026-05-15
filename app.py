@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 st.set_page_config(page_title="Dashboard Metas Fasiclin", layout="wide")
 
 # Link da sua planilha (ajustado para exportação CSV)
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1EbU1VaMWgao1F848cSUfYGCIPyhLExhffQ935opaDEY/export?format=csv&gid=0"
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1EbU1VaMWgao1F848cSUfYGCIPyhLExhffQ935opaDEY/edit?gid=0#gid=0"
 
 @st.cache_data
 def load_data():
