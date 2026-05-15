@@ -1,73 +1,76 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 
-# Configuração da página
+# Configuração da página e Estética Fasiclin
 st.set_page_config(page_title="Dashboard Metas Fasiclin", layout="wide")
 
-# Link da sua planilha (ajustado para exportação CSV)
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1EbU1VaMWgao1F848cSUfYGCIPyhLExhffQ935opaDEY/edit?gid=0#gid=0"
+# Link direto para exportação CSV da sua planilha
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1EbU1VaMWgao1F848cSUfYGCIPyhLExhffQ935opaDEY/export?format=csv&gid=0"
 
 @st.cache_data
 def load_data():
+    # Lê a planilha e limpa os nomes das colunas de espaços extras
     df = pd.read_csv(SHEET_URL)
-    # Remove espaços extras no início/fim dos nomes das colunas
-    df.columns = df.columns.str.strip()
+    df.columns = [col.strip().replace('\n', ' ') for col in df.columns]
     
-    # Lista de colunas para converter em número
-    cols_to_fix = ['QUANTIDADE DE ALUNOS', 'QUANTIDADE DE PROCEDIMENTO POR SEMESTRE']
+    # Tratamento de colunas numéricas
+    cols_numericas = ['FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 
+                      'QUANTIDADE DE PROCEDIMENTO POR SEMESTRE', 'QUANTIDADE DE ALUNOS']
     
-    for col in cols_to_fix:
+    for col in cols_numericas:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+    
     return df
 
-df = load_data()
+try:
+    df = load_data()
+    
+    # --- HEADER E INDICADORES (Igual ao modelo Sinop) ---
+    st.title("📊 Monitoramento de Metas Clínicas - Fasiclin")
+    
+    # Cálculos para os indicadores
+    meses_col = ['FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO']
+    meta_total = df['QUANTIDADE DE PROCEDIMENTO POR SEMESTRE'].sum()
+    realizado_total = df[df.columns.intersection(meses_col)].sum().sum()
+    faltam = meta_total - realizado_total
+    eficiencia = (realizado_total / meta_total * 100) if meta_total > 0 else 0
 
-# --- SIDEBAR (Filtros) ---
-st.sidebar.image("https://metasatendimentosfasiclin.streamlit.app/logo.png", width=150) # Use o link da sua logo real
-st.sidebar.title("Filtros")
-clinica_sel = st.sidebar.multiselect("Selecione a Clínica", df['CLINICA'].unique(), default=df['CLINICA'].unique())
-semestre_sel = st.sidebar.multiselect("Semestre", df['SEMESTRE'].unique(), default=df['SEMESTRE'].unique())
+    # Barra de Acompanhamento azul clara (estilo imagem enviada)
+    st.info(f"**Acompanhamento de Metas:** Faltam {int(faltam)} procedimentos. Média necessária: {int(faltam/2)}/mês.")
 
-df_filtered = df[(df['CLINICA'].isin(clinica_sel)) & (df['SEMESTRE'].isin(semestre_sel))]
+    col_meta1, col_meta2 = st.columns([1, 2])
+    
+    with col_meta1:
+        # Gráfico de Rosca de Eficiência Total
+        fig_donut = go.Figure(go.Pie(
+            values=[eficiencia, 100-eficiencia],
+            labels=['Realizado', 'Restante'],
+            hole=.7,
+            marker_colors=['#003366', '#f0f2f6'],
+            showlegend=False
+        ))
+        fig_donut.add_annotation(text=f"Eficiência Total<br><b>{int(eficiencia)}%</b>", showarrow=False, font_size=20)
+        fig_donut.update_layout(margin=dict(t=0, b=0, l=0, r=0), height=300)
+        st.plotly_chart(fig_donut, use_container_width=True)
 
-# --- HEADER ---
-st.title("📊 Monitoramento de Metas Clínicas")
-st.markdown("---")
+    with col_meta2:
+        # Gráfico de Barras Comparativo Realizado vs Meta
+        realizado_por_clinica = df.groupby('CLINICA')[df.columns.intersection(meses_col)].sum().sum(axis=1)
+        meta_por_clinica = df.groupby('CLINICA')['QUANTIDADE DE PROCEDIMENTO POR SEMESTRE'].sum()
+        
+        fig_bar = go.Figure(data=[
+            go.Bar(name='Realizado', x=realizado_por_clinica.index, y=realizado_por_clinica, marker_color='#16a34a'),
+            go.Bar(name='Meta', x=meta_por_clinica.index, y=meta_por_clinica, marker_color='#003366')
+        ])
+        fig_bar.update_layout(barmode='group', title="Realizado vs Meta por Clínica", height=350)
+        st.plotly_chart(fig_bar, use_container_width=True)
 
-# --- MÉTRICAS PRINCIPAIS ---
-meta_total = df_filtered['QUANTIDADE DE PROCEDIMENTO POR SEMESTRE'].sum()
-# Simulando um "Realizado" somando os meses da planilha (ajuste conforme suas colunas de meses)
-meses_cols = ['FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO']
-realizado_total = df_filtered[df_filtered.columns.intersection(meses_cols)].sum().sum()
-percentual = (realizado_total / meta_total) * 100 if meta_total > 0 else 0
+    # --- TABELA DE DETALHAMENTO ---
+    st.markdown("### Detalhamento dos Procedimentos")
+    st.dataframe(df[['CLINICA', 'SEMESTRE', 'PROCEDIMENTO', 'QUANTIDADE DE PROCEDIMENTO POR SEMESTRE']], use_container_width=True)
 
-col1, col2, col3 = st.columns(3)
-col1.metric("Meta Semestral Total", f"{int(meta_total)}")
-col2.metric("Realizado Acumulado", f"{int(realizado_total)}", f"{percentual:.1f}%")
-col3.progress(percentual / 100)
-
-# --- GRÁFICOS ---
-st.markdown("### Análise por Clínica e Procedimento")
-c1, c2 = st.columns(2)
-
-with c1:
-    fig_bar = px.bar(df_filtered, 
-                     x='PROCEDIMENTO', 
-                     y='QUANTIDADE DE PROCEDIMENTO POR SEMESTRE',
-                     color='CLINICA',
-                     title="Meta por Especialidade",
-                     barmode='group')
-    st.plotly_chart(fig_bar, use_container_width=True)
-
-with c2:
-    fig_pie = px.pie(df_filtered, values='QUANTIDADE DE PROCEDIMENTO POR SEMESTRE', names='CLINICA', 
-                     title="Distribuição de Carga por Clínica",
-                     hole=0.4)
-    st.plotly_chart(fig_pie, use_container_width=True)
-
-# --- TABELA DETALHADA ---
-st.markdown("### Dados Analíticos")
-st.dataframe(df_filtered, use_container_width=True)
+except Exception as e:
+    st.error(f"Erro ao processar dados: {e}")
+    st.write("Colunas detetadas na planilha:", list(df.columns) if 'df' in locals() else "Não foi possível ler a planilha.")
