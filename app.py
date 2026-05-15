@@ -12,10 +12,15 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/1EbU1VaMWgao1F848cSUfYGCIPyh
 @st.cache_data
 def load_data():
     df = pd.read_csv(SHEET_URL)
-    # Limpeza simples: converter colunas numéricas
+    # Remove espaços extras no início/fim dos nomes das colunas
+    df.columns = df.columns.str.strip()
+    
+    # Lista de colunas para converter em número
     cols_to_fix = ['QUANTIDADE DE ALUNOS', 'QUANTIDADE DE PROCEDIMENTO POR SEMESTRE']
+    
     for col in cols_to_fix:
-        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
     return df
 
 df = load_data()
