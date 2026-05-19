@@ -35,22 +35,24 @@ if not df.empty:
     st.title("📊 Monitoramento de Metas Clínicas - Fasiclin")
     st.markdown("---")
 
-    # --- FILTROS NA SIDEBAR ---
-    st.sidebar.header("🎛️ Filtros de Análise")
+    # --- FILTROS NO TOPO (Abaixo do Cabeçalho) ---
+    col_filtros1, col_filtros2 = st.columns(2)
     
-    # Filtro de Semestre
-    lista_semestres = sorted(df['SEMESTRE'].unique()) if 'SEMESTRE' in df.columns else []
-    if lista_semestres:
-        semestre_selecionado = st.sidebar.selectbox("Selecione o Semestre", ["Todos"] + list(lista_semestres))
-    else:
-        semestre_selecionado = "Todos"
+    with col_filtros1:
+        # Filtro de Semestre
+        lista_semestres = sorted(df['SEMESTRE'].unique()) if 'SEMESTRE' in df.columns else []
+        if lista_semestres:
+            semestre_selecionado = st.selectbox("Selecione o Semestre", ["Todos"] + list(lista_semestres))
+        else:
+            semestre_selecionado = "Todos"
 
-    # Filtro de Clínica
-    lista_clinicas = sorted(df['CLINICA'].unique()) if 'CLINICA' in df.columns else []
-    if lista_clinicas:
-        clinica_selecionada = st.sidebar.multiselect("Selecione as Clínicas", list(lista_clinicas), default=list(lista_clinicas))
-    else:
-        clinica_selecionada = []
+    with col_filtros2:
+        # Filtro de Clínica
+        lista_clinicas = sorted(df['CLINICA'].unique()) if 'CLINICA' in df.columns else []
+        if lista_clinicas:
+            clinica_selecionada = st.multiselect("Selecione as Clínicas", list(lista_clinicas), default=list(lista_clinicas))
+        else:
+            clinica_selecionada = []
 
     # Aplicando os Filtros no DataFrame
     df_filtrado = df.copy()
@@ -58,6 +60,8 @@ if not df.empty:
         df_filtrado = df_filtrado[df_filtrado['SEMESTRE'] == semestre_selecionado]
     if clinica_selecionada:
         df_filtrado = df_filtrado[df_filtrado['CLINICA'].isin(clinica_selecionada)]
+
+    st.markdown("---")
 
     # --- CÁLCULOS DOS INDICADORES ---
     meses_col = ['FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO']
@@ -76,7 +80,7 @@ if not df.empty:
     col_m2.metric("Realizado Total", f"{int(realizado_total)}", delta=f"{int(eficiencia)}% da Meta", delta_color="normal")
     col_m3.metric("Faltam", f"{int(faltam)}")
     
-    # Média mensal dinâmica baseada nos meses restantes (ex: assumindo 6 meses no semestre)
+    # Média mensal dinâmica baseada nos meses do semestre (6 meses)
     col_m4.metric("Média p/ Mês Necessária", f"{int(faltam / 6 if faltam > 0 else 0)}")
 
     st.markdown("---")
@@ -85,10 +89,10 @@ if not df.empty:
     col_g1, col_g2 = st.columns([1, 2])
     
     with col_g1:
-        # Gráfico de Rosca de Eficiência Total (Limitado a 100% para o visual)
+        # Gráfico de Rosca de Eficiência Total
         exibicao_eficiencia = min(eficiencia, 100)
         fig_donut = go.Figure(go.Pie(
-            values=[exibicao_eficiencia, 100 - exibicao_eficiencia],
+            values=[exibicao_eficiencia, 100 - exibiciencia_eficiencia if (100 - exibicao_eficiencia) > 0 else 0],
             labels=['Realizado', 'Restante'],
             hole=.75,
             marker_colors=['#003366', '#E2E8F0'], # Azul Fasiclin e Cinza Claro
