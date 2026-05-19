@@ -88,11 +88,11 @@ if not df.empty:
     # --- GRÁFICOS ---
     col_g1, col_g2 = st.columns([1, 2])
     
-    with col_g1:
+  with col_g1:
         # Gráfico de Rosca de Eficiência Total
         exibicao_eficiencia = min(eficiencia, 100)
         fig_donut = go.Figure(go.Pie(
-            values=[exibicao_eficiencia, 100 - exibiciencia_eficiencia if (100 - exibicao_eficiencia) > 0 else 0],
+            values=[exibicao_eficiencia, 100 - exibicao_eficiencia if (100 - exibicao_eficiencia) > 0 else 0],
             labels=['Realizado', 'Restante'],
             hole=.75,
             marker_colors=['#003366', '#E2E8F0'], # Azul Fasiclin e Cinza Claro
@@ -110,7 +110,6 @@ if not df.empty:
             plot_bgcolor='rgba(0,0,0,0)'
         )
         st.plotly_chart(fig_donut, use_container_width=True, config={'displayModeBar': False})
-
     with col_g2:
         # Gráfico de Barras Comparativo Realizado vs Meta por Clínica
         realizado_por_clinica = df_filtrado.groupby('CLINICA')[meses_existentes].sum().sum(axis=1)
