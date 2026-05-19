@@ -78,4 +78,4 @@ if not df.empty:
     col_m1, col_m2, col_m3, col_m4 = st.columns(4)
     col_m1.metric("Meta Total", f"{int(meta_total)}")
     col_m2.metric("Realizado Total", f"{int(realizado_total)}", delta=f"{int(eficiencia)}% da Meta", delta_color="normal")
-    col_m3.metric("Faltam", f"{int(faltam
+    col_m3.metric("Faltam", f"{int(faltam)
